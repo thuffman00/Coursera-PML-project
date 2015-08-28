@@ -1,0 +1,81 @@
+---
+title: "Pracitical Machine Learning project"
+author: "T Huffman"
+date: "Sunday, August 23, 2015"
+output: html_document
+---
+
+This project centers on how to predict the excerise preformance of the participants. Using the data from cloudfront which is a collection of sensor data for devices like Jawbone Up, Nike FuelBand, and Fitbit it, the we are expected to make predictions about the participants. Those using the devices record information related to workout duration in an eftort to provide data used to evaluate progress. What is not measured is whethere the execises recorded are preformed properly. There were five classification used to determine if the exercise (dumbbell lifting) was properly performed. Class A was the correct form while class B-E waere all incorrect. It is the resonsibility of the student to use the data and attempt to predict the percentage who peromed them correctly. 
+
+So lets get started.
+
+###Data Processing
+
+The first thing was to load the necessary data and liobraries to be used into memory. Using the URL provided, I loaded the information straight into memory. 
+```{r, echo=FALSE}
+suppressWarnings(suppressMessages(library(caret)))
+suppressWarnings(suppressMessages(library(rpart)))
+suppressWarnings(suppressMessages(library(rpart.plot)))
+suppressWarnings(suppressMessages(library(RColorBrewer)))
+suppressWarnings(suppressMessages(library(rattle)))
+suppressWarnings(suppressMessages(library(randomForest)))
+
+trainURL<-"http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+testURL<-"http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+training<-read.csv(url(trainURL),na.strings=c("NA",""))
+testing<-read.csv(url(testURL),na.strings=c("NA",""))
+```
+These are 19622 observations with 53 features in training dataset 
+```{r,echo=FALSE}
+dim(training)
+```
+And 20 observations with 53 features in the test dataset
+```{r,echo=FALSE}
+dim(testing)
+```
+###Data Cleaning 
+
+We'll remove the rows with NA's 
+```{r,echo=FALSE}
+training <- training[, colSums(is.na(training)) == 0] 
+testing <- testing[, colSums(is.na(testing)) == 0]
+```
+Check that the training dataset no lomnger has any NA's
+```{r,echo=T}
+sum(is.na(training))
+```
+Same with the testing dataset
+```{r,echo=T}
+sum(is.na(testing))
+```
+We remove a few of the columns that we won't need for features. This reduces the number of features to 53 for both training and testing dataset.
+```{r,echo=F}
+classe<-training$classe
+training<-training[,!grepl("^X|timestamp|window", names(training))]
+testing<-testing[,!grepl("^X|timestamp|window", names(testing))]
+training<- training[, sapply(training, is.numeric)]
+testing<- testing[, sapply(testing, is.numeric)]
+training$classe<-classe
+set.seed(345)
+```
+```{r,echo=TRUE}
+dim(training)
+dim(testing)
+```
+### Data Analysis
+
+#### Partition the data
+We'll create the inTest and inTrain partitions to used during the analysis and construct fit model using random forest method.
+```{r,echo=FALSE}
+inTrain<-createDataPartition(y=training$classe,p=0.7,list=F)
+inTraining<-training[inTrain,]
+inTesting<-training[-inTrain,]
+randomMDL <- train(classe ~ ., data=inTraining, method="rf", trControl=trainControl(method="cv", number=5), ntree=50)
+
+result <- predict(randomMDL, testing[, -length(names(testing))])
+```
+The results of the prediction.
+
+```{r,echo=TRUE}
+result
+```
